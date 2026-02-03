@@ -1,0 +1,26 @@
+[package]
+name = "dex-bytecode"
+version = "0.0.1"
+edition = "2021"
+
+[lib]
+name = "dex_bytecode"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dex-bytecode-dis"
+path = "bin/dis.rs"
+
+[profile.release]
+opt-level = "z"
+debug = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dependencies]
+log = "0.4.21"
+simple_logger = "5.0.0"
+clap = { version = "4.5.4", features = ["derive"] }
