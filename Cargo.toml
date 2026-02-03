@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+
+exclude = [
+    # Exclude them so they can override the [profile.release] section
+    "dex-bytecode-py",
+]
+
+members = ["dex-bytecode"]
+
+[profile.test]
+opt-level = 0
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
