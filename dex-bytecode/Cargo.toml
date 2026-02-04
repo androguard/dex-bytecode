@@ -11,6 +11,18 @@ path = "src/lib.rs"
 name = "dex-bytecode-dis"
 path = "bin/dis.rs"
 
+[[example]]
+name = "resolve_example"
+path = "examples/resolve_example.rs"
+
+[[example]]
+name = "control_flow_example"
+path = "examples/control_flow_example.rs"
+
+[[example]]
+name = "try_catch_example"
+path = "examples/try_catch_example.rs"
+
 [profile.release]
 opt-level = "z"
 debug = false
@@ -24,3 +36,4 @@ strip = true
 log = "0.4.21"
 simple_logger = "5.0.0"
 clap = { version = "4.5.4", features = ["derive"] }
+colored = "2.1"

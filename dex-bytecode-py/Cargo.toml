@@ -1,0 +1,13 @@
+[package]
+name = "dex-bytecode-py"
+version = "0.0.1"
+edition = "2021"
+description = "Python bindings for dex-bytecode (Dalvik instruction decoder)"
+
+[lib]
+name = "dex_bytecode_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+dex-bytecode = { path = "../dex-bytecode" }
+pyo3 = { version = "0.22", features = ["extension-module"] }

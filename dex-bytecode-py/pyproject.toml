@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.4,<2"]
+build-backend = "maturin"
+
+[project]
+name = "dex-bytecode-py"
+version = "0.0.1"
+description = "Python bindings for dex-bytecode: Dalvik instruction decoder (like androguard)"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "License :: OSI Approved :: Apache-2.0",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Disassemblers",
+]
+
+[project.scripts]
+dex-dis = "dex_bytecode_py_cli:main"
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "python"
