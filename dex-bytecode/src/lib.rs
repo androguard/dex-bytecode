@@ -16,7 +16,9 @@ pub use control_flow::{
     exception_edges, explicit_successors, format_catch_line, is_unconditional_branch, BasicBlock,
     TryCatchEntry,
 };
-pub use decoder::{decode_all, decode_all_with_resolver, decode_one, decode_one_with_resolver, Decoder};
+pub use decoder::{
+    decode_all, decode_all_with_resolver, decode_one, decode_one_with_resolver, Decoder,
+};
 pub use error::DexError;
 pub use instruction::{Instruction, RefKind};
 pub use opcodes::{get_opcode_entry, Format, OpcodeEntry, PayloadKind};

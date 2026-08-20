@@ -1,8 +1,8 @@
 //! Per-format instruction tests: one module per Dalvik instruction format.
 //! Each module tests every opcode that uses that format with min, max, and representative operands.
 
-mod format_f10x;
 mod format_f10t;
+mod format_f10x;
 mod format_f11n;
 mod format_f11x;
 mod format_f12x;

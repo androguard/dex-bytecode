@@ -20,4 +20,4 @@ dex-dis = "dex_bytecode_py_cli:main"
 
 [tool.maturin]
 features = ["pyo3/extension-module"]
-python-source = "python"
+module-name = "dex_bytecode_py"

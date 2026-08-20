@@ -33,7 +33,10 @@ impl std::str::FromStr for ColorWhen {
 }
 
 #[derive(Parser, Debug)]
-#[command(version, about = "Disassemble Dalvik bytecode from a file, stdin, or hex.")]
+#[command(
+    version,
+    about = "Disassemble Dalvik bytecode from a file, stdin, or hex."
+)]
 struct Args {
     /// Input: file path, or "-" for stdin (default: "-" if no --hex)
     #[arg(short, long)]
@@ -124,7 +127,11 @@ fn main() {
     }
 
     if args.offset >= data.len() {
-        eprintln!("Offset {} past end of data ({} bytes)", args.offset, data.len());
+        eprintln!(
+            "Offset {} past end of data ({} bytes)",
+            args.offset,
+            data.len()
+        );
         std::process::exit(1);
     }
 

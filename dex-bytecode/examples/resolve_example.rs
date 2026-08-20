@@ -27,13 +27,23 @@ fn main() {
     println!("Without resolver:");
     let instructions = dex_bytecode::decode_all(bytecode, 0).unwrap();
     for ins in &instructions {
-        println!("  {:08x}  {} {}", ins.offset, ins.mnemonic(), ins.operands());
+        println!(
+            "  {:08x}  {} {}",
+            ins.offset,
+            ins.mnemonic(),
+            ins.operands()
+        );
     }
 
     println!("\nWith resolver:");
     let resolver = ExampleResolver;
     let instructions = decode_all_with_resolver(bytecode, 0, &resolver).unwrap();
     for ins in &instructions {
-        println!("  {:08x}  {} {}", ins.offset, ins.mnemonic(), ins.operands());
+        println!(
+            "  {:08x}  {} {}",
+            ins.offset,
+            ins.mnemonic(),
+            ins.operands()
+        );
     }
 }

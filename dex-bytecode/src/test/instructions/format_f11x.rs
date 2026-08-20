@@ -26,11 +26,7 @@ fn f11x_every_opcode_decodes() {
 
 #[test]
 fn f11x_move_result_return_throw() {
-    let tests: &[(u8, &str)] = &[
-        (0x0a, "move-result"),
-        (0x0f, "return"),
-        (0x27, "throw"),
-    ];
+    let tests: &[(u8, &str)] = &[(0x0a, "move-result"), (0x0f, "return"), (0x27, "throw")];
     for (op, mnemonic) in tests.iter().copied() {
         let ins = decode_one(&[op, 0u8], 0).unwrap();
         assert_eq!(ins.mnemonic(), mnemonic);

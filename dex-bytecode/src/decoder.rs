@@ -52,7 +52,8 @@ fn read_u64(data: &[u8], offset: usize) -> Option<u64> {
 
 /// Decode a single instruction at `offset` in `data`. Returns the instruction and its length.
 pub fn decode_one(data: &[u8], offset: usize) -> Result<Instruction, DexError> {
-    let unit = read_u16(data, offset).ok_or_else(|| DexError::invalid("truncated at first 16-bit unit"))?;
+    let unit = read_u16(data, offset)
+        .ok_or_else(|| DexError::invalid("truncated at first 16-bit unit"))?;
     let op_byte = unit as u8;
 
     // Payload pseudo-instructions: 0x0100, 0x0200, 0x0300 (high byte 0x01/0x02/0x03, low 0x00)
@@ -87,7 +88,8 @@ pub fn decode_one_with_resolver<R: ResolveRef>(
     offset: usize,
     resolver: &R,
 ) -> Result<Instruction, DexError> {
-    let unit = read_u16(data, offset).ok_or_else(|| DexError::invalid("truncated at first 16-bit unit"))?;
+    let unit = read_u16(data, offset)
+        .ok_or_else(|| DexError::invalid("truncated at first 16-bit unit"))?;
     let op_byte = unit as u8;
 
     if unit > 0xFF && (op_byte == 0x00 || op_byte == 0xFF) {
@@ -496,7 +498,10 @@ impl<'a> Iterator for Decoder<'a> {
     type Item = Result<Instruction, DexError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let max = self.size_16bit_units.map(|s| s * 2).unwrap_or(self.data.len());
+        let max = self
+            .size_16bit_units
+            .map(|s| s * 2)
+            .unwrap_or(self.data.len());
         if self.offset >= max || self.offset >= self.data.len() {
             return None;
         }

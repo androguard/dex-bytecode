@@ -30,5 +30,9 @@ fn f20t_goto16_offsets() {
     let bytecode = [0x29u8, 0x00, 0x02, 0x00]; // goto/16 +2 (AAAA=2 in LE)
     let ins = decode_one(&bytecode[..], 0).unwrap();
     assert_eq!(ins.mnemonic(), "goto/16");
-    assert!(ins.operands().contains("02") || ins.operands().contains("2"), "operands {:?}", ins.operands());
+    assert!(
+        ins.operands().contains("02") || ins.operands().contains("2"),
+        "operands {:?}",
+        ins.operands()
+    );
 }

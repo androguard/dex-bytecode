@@ -7,51 +7,51 @@ use crate::instruction::RefKind;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Format {
-    F00x,   // unused / invalid
-    F10x,   // op
-    F10t,   // op AA (s8 offset)
-    F11n,   // op A|B (nibble const)
-    F11x,   // op AA
-    F12x,   // B|A|op
-    F20t,   // op ØØØØ AAAA
-    F20bc,  // op AA BBBB
-    F21c,   // op AA BBBB
-    F21h,   // op AA BBBB (special shift)
-    F21s,   // op AA BBBB (s16)
-    F21t,   // op AA BBBB (branch)
-    F22b,   // op AA BB CC
-    F22x,   // op AA BBBB (16-bit register)
-    F22c,   // B|A|op CCCC
-    F22s,   // B|A|op CCCC (s16)
-    F22t,   // B|A|op CCCC (branch)
-    F22cs,  // B|A|op CCCC
-    F23x,   // op AA BB CC
-    F30t,   // op ØØØØ AAAAAAAA
-    F31c,   // op AA BBBBBBBB
-    F31i,   // op AA BBBBBBBB
-    F31t,   // op AA BBBBBBBB (branch)
-    F32x,   // op ØØØØ AAAA BBBB
-    F35c,   // A|G|op BBBB C|D|E|F
-    F35mi,  // A|G|op BBBB C|D|E|F
-    F35ms,  // A|G|op BBBB C|D|E|F
-    F3rc,   // op AA BBBB CCCC
-    F3rmi,  // op AA BBBB CCCC
-    F3rms,  // op AA BBBB CCCC
-    F40sc,  // op BBBBBBBB AAAA
-    F41c,   // op BBBBBBBB AAAA
-    F45cc,  // op A|G BBBB C|D|E|F HHHH
-    F4rcc,  // op AA BBBB CCCC HHHH
-    F51l,   // op AA BBBBBBBBBBBBBBBB
-    F52c,   // op CCCCCCCC AAAA BBBB
-    F5rc,   // op BBBBBBBB AAAA CCCC
+    F00x,  // unused / invalid
+    F10x,  // op
+    F10t,  // op AA (s8 offset)
+    F11n,  // op A|B (nibble const)
+    F11x,  // op AA
+    F12x,  // B|A|op
+    F20t,  // op ØØØØ AAAA
+    F20bc, // op AA BBBB
+    F21c,  // op AA BBBB
+    F21h,  // op AA BBBB (special shift)
+    F21s,  // op AA BBBB (s16)
+    F21t,  // op AA BBBB (branch)
+    F22b,  // op AA BB CC
+    F22x,  // op AA BBBB (16-bit register)
+    F22c,  // B|A|op CCCC
+    F22s,  // B|A|op CCCC (s16)
+    F22t,  // B|A|op CCCC (branch)
+    F22cs, // B|A|op CCCC
+    F23x,  // op AA BB CC
+    F30t,  // op ØØØØ AAAAAAAA
+    F31c,  // op AA BBBBBBBB
+    F31i,  // op AA BBBBBBBB
+    F31t,  // op AA BBBBBBBB (branch)
+    F32x,  // op ØØØØ AAAA BBBB
+    F35c,  // A|G|op BBBB C|D|E|F
+    F35mi, // A|G|op BBBB C|D|E|F
+    F35ms, // A|G|op BBBB C|D|E|F
+    F3rc,  // op AA BBBB CCCC
+    F3rmi, // op AA BBBB CCCC
+    F3rms, // op AA BBBB CCCC
+    F40sc, // op BBBBBBBB AAAA
+    F41c,  // op BBBBBBBB AAAA
+    F45cc, // op A|G BBBB C|D|E|F HHHH
+    F4rcc, // op AA BBBB CCCC HHHH
+    F51l,  // op AA BBBBBBBBBBBBBBBB
+    F52c,  // op CCCCCCCC AAAA BBBB
+    F5rc,  // op BBBBBBBB AAAA CCCC
 }
 
 /// Payload pseudo-instruction identifier (high 16-bit = 0x01, 0x02, 0x03).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PayloadKind {
-    PackedSwitch,   // 0x0100
-    SparseSwitch,   // 0x0200
-    FillArrayData,  // 0x0300
+    PackedSwitch,  // 0x0100
+    SparseSwitch,  // 0x0200
+    FillArrayData, // 0x0300
 }
 
 /// Entry in the opcode table.
@@ -64,7 +64,11 @@ pub struct OpcodeEntry {
 
 impl OpcodeEntry {
     const fn new(format: Format, mnemonic: &'static str, ref_kind: RefKind) -> Self {
-        Self { format, mnemonic, ref_kind }
+        Self {
+            format,
+            mnemonic,
+            ref_kind,
+        }
     }
 }
 
@@ -74,12 +78,30 @@ pub fn format_length(f: Format) -> u32 {
     match f {
         Format::F00x => 0,
         Format::F10x | Format::F10t | Format::F11n | Format::F11x | Format::F12x => 2,
-        Format::F20t | Format::F20bc | Format::F21c | Format::F21h | Format::F21s
-        | Format::F21t | Format::F22b | Format::F22x | Format::F22c | Format::F22s
-        | Format::F22t | Format::F22cs | Format::F23x => 4,
-        Format::F30t | Format::F31c | Format::F31i | Format::F31t | Format::F32x
-        | Format::F35c | Format::F35mi | Format::F35ms | Format::F3rc
-        | Format::F3rmi | Format::F3rms => 6,
+        Format::F20t
+        | Format::F20bc
+        | Format::F21c
+        | Format::F21h
+        | Format::F21s
+        | Format::F21t
+        | Format::F22b
+        | Format::F22x
+        | Format::F22c
+        | Format::F22s
+        | Format::F22t
+        | Format::F22cs
+        | Format::F23x => 4,
+        Format::F30t
+        | Format::F31c
+        | Format::F31i
+        | Format::F31t
+        | Format::F32x
+        | Format::F35c
+        | Format::F35mi
+        | Format::F35ms
+        | Format::F3rc
+        | Format::F3rmi
+        | Format::F3rms => 6,
         Format::F40sc | Format::F41c | Format::F45cc | Format::F4rcc => 8,
         Format::F51l | Format::F52c | Format::F5rc => 10,
     }
@@ -355,7 +377,11 @@ pub static OPCODE_TABLE: [OpcodeEntry; 256] = [
     OpcodeEntry::new(Format::F00x, "unused", RefKind::None),
     OpcodeEntry::new(Format::F00x, "unused", RefKind::None),
     OpcodeEntry::new(Format::F45cc, "invoke-polymorphic", RefKind::MethodProto),
-    OpcodeEntry::new(Format::F4rcc, "invoke-polymorphic/range", RefKind::MethodProto),
+    OpcodeEntry::new(
+        Format::F4rcc,
+        "invoke-polymorphic/range",
+        RefKind::MethodProto,
+    ),
     OpcodeEntry::new(Format::F35c, "invoke-custom", RefKind::CallSite),
     OpcodeEntry::new(Format::F3rc, "invoke-custom/range", RefKind::CallSite),
     OpcodeEntry::new(Format::F21c, "const-method-handle", RefKind::Method),

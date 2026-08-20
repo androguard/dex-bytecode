@@ -42,7 +42,8 @@ pub fn patch_branch_target(
     from_offset: usize,
     to_offset: u32,
 ) -> Result<(), DexError> {
-    let unit = read_u16(data, from_offset).ok_or_else(|| DexError::invalid("truncated at branch"))?;
+    let unit =
+        read_u16(data, from_offset).ok_or_else(|| DexError::invalid("truncated at branch"))?;
     let op = unit as u8;
     if unit > 0xFF && (op == 0x00 || op == 0xFF) && get_payload_kind(unit).is_some() {
         return Err(DexError::invalid("payload is not a branch"));
@@ -54,7 +55,8 @@ pub fn patch_branch_target(
     }
     let from_i = from_offset as i32;
     let to_i = to_offset as i32;
-    let rel_units = (to_i - (from_i + 2)) / 2;
+    // Dalvik: target = from + rel_units * 2 (relative to the branch instruction itself).
+    let rel_units = (to_i - from_i) / 2;
     match entry.format {
         Format::F10t => {
             let rel = rel_units as i8;
@@ -112,7 +114,7 @@ pub fn encode_return_void() -> [u8; 2] {
 }
 
 /// Encodes a `goto` (F10t) to a relative offset in 16-bit units.
-/// `rel_units`: signed 8-bit; target = (instruction_address + 2) + rel_units * 2.
+/// `rel_units`: signed 8-bit; target = instruction_address + rel_units * 2.
 #[inline]
 pub fn encode_goto(rel_units: i8) -> [u8; 2] {
     [0x28, rel_units as u8]

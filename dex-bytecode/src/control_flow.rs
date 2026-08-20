@@ -59,39 +59,41 @@ pub fn branch_targets(data: &[u8], offset: usize) -> Vec<u32> {
         return Vec::new();
     }
 
+    // Dalvik: destination = instruction_address + signed_offset (in 16-bit code units).
+    // See https://source.android.com/docs/core/runtime/dalvik-bytecode
     let offset_i = offset as i32;
     match entry.format {
         Format::F10t => {
             let aa = data.get(offset + 1).copied().unwrap_or(0) as i8;
-            let target = offset_i + 2 + (aa as i32) * 2;
+            let target = offset_i + (aa as i32) * 2;
             if target >= 0 {
                 return alloc::vec![target as u32];
             }
         }
         Format::F20t => {
             let aaaa = read_i16_dec(data, offset + 2).unwrap_or(0) as i32;
-            let target = offset_i + 2 + aaaa * 2;
+            let target = offset_i + aaaa * 2;
             if target >= 0 {
                 return alloc::vec![target as u32];
             }
         }
         Format::F21t => {
             let bbbb = read_i16_dec(data, offset + 2).unwrap_or(0) as i32;
-            let target = offset_i + 2 + bbbb * 2;
+            let target = offset_i + bbbb * 2;
             if target >= 0 {
                 return alloc::vec![target as u32];
             }
         }
         Format::F22t => {
             let cccc = read_i16_dec(data, offset + 2).unwrap_or(0) as i32;
-            let target = offset_i + 2 + cccc * 2;
+            let target = offset_i + cccc * 2;
             if target >= 0 {
                 return alloc::vec![target as u32];
             }
         }
         Format::F30t => {
             let aaaaaaaa = read_i32_dec(data, offset + 2).unwrap_or(0);
-            let target = offset_i + 2 + aaaaaaaa * 2;
+            let target = offset_i + aaaaaaaa * 2;
             if target >= 0 {
                 return alloc::vec![target as u32];
             }
@@ -99,7 +101,7 @@ pub fn branch_targets(data: &[u8], offset: usize) -> Vec<u32> {
         Format::F31t => {
             // packed-switch / sparse-switch: branch offset in 16-bit units points to payload
             let bbbbbbbb = read_i32_dec(data, offset + 2).unwrap_or(0);
-            let target = offset_i + 2 + bbbbbbbb * 2;
+            let target = offset_i + bbbbbbbb * 2;
             if target >= 0 && (target as usize) < data.len() {
                 return alloc::vec![target as u32];
             }
@@ -141,7 +143,8 @@ pub fn explicit_successors(data: &[u8], offset: usize) -> Vec<u32> {
     if op == 0x2b || op == 0x2c {
         // Payload location is encoded like 31t (signed 32-bit in 16-bit units).
         let rel_units = read_i32_dec(data, offset + 2).unwrap_or(0);
-        let payload_i = (offset as i32) + 2 + rel_units * 2;
+        // Payload address is relative to the switch instruction (same as other branches).
+        let payload_i = (offset as i32) + rel_units * 2;
         if payload_i < 0 {
             return Vec::new();
         }
@@ -289,7 +292,10 @@ pub fn format_catch_line(entry: &TryCatchEntry, type_name: Option<&str>) -> Stri
     let ty = type_name.unwrap_or("all");
     alloc::format!(
         ".catch {} {{ 0x{:08x} .. 0x{:08x} }} :L{:08x}",
-        ty, entry.start_offset, entry.end_offset, entry.handler_offset
+        ty,
+        entry.start_offset,
+        entry.end_offset,
+        entry.handler_offset
     )
 }
 
@@ -345,8 +351,9 @@ pub fn basic_blocks(
         for t in &succ {
             block_starts.insert(*t);
         }
-        // Only the instruction after a branch starts a new block (not after every instruction)
+        // Conditional / branch instructions start a block; fall-through after them starts another.
         if !succ.is_empty() {
+            block_starts.insert(start as u32);
             block_starts.insert(end as u32);
         }
     }
@@ -397,11 +404,7 @@ pub fn basic_blocks(
 
 /// Returns all CFG edges (from_offset, to_offset) including fallthrough.
 /// Use this for full control-flow graph visualization (e.g. DOT export).
-pub fn cfg_edges(
-    instructions: &[Instruction],
-    data: &[u8],
-    base_offset: usize,
-) -> Vec<(u32, u32)> {
+pub fn cfg_edges(instructions: &[Instruction], data: &[u8], base_offset: usize) -> Vec<(u32, u32)> {
     let blocks = basic_blocks(instructions, data, base_offset);
     let mut edges = Vec::new();
     for b in &blocks {

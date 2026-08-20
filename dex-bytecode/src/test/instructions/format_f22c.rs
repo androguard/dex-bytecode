@@ -22,7 +22,9 @@ fn f22c_every_opcode_decodes() {
             let ins = decode_one(&bytecode[..], 0).unwrap();
             assert_eq!(ins.opcode(), op);
             assert_eq!(ins.mnemonic(), entry.mnemonic);
-            assert!(ins.operands().starts_with(&alloc::format!("v{}, v{}, ", a, b)));
+            assert!(ins
+                .operands()
+                .starts_with(&alloc::format!("v{}, v{}, ", a, b)));
             assert_eq!(ins.length(), 4);
         }
     }

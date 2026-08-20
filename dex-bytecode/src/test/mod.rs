@@ -108,12 +108,36 @@ fn test_linear_sweep_strings() {
          7000620000006E20020080000E00",
     );
     let expected: &[&str] = &[
-        "const-string", "const-string", "const-string", "const-string", "const-string",
-        "const-string", "const-string", "const-string", "const-string", "const-string",
-        "sget-object", "invoke-virtual", "sget-object", "invoke-virtual", "sget-object",
-        "invoke-virtual", "sget-object", "invoke-virtual", "sget-object", "invoke-virtual",
-        "sget-object", "invoke-virtual", "sget-object", "invoke-virtual", "sget-object",
-        "invoke-virtual", "sget-object", "invoke-virtual", "sget-object", "invoke-virtual",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "const-string",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
+        "sget-object",
+        "invoke-virtual",
         "return-void",
     ];
     let decoded = crate::decode_all(&bytecode, 0).unwrap();
@@ -134,8 +158,18 @@ fn test_linear_sweep_switch() {
          1300480028F3000000010300010000000A0000000D00000010000000",
     );
     let expected: &[&str] = &[
-        "packed-switch", "const/16", "if-eqz", "const/16", "return", "const/16",
-        "goto", "const/16", "goto", "const/16", "goto", "nop",
+        "packed-switch",
+        "const/16",
+        "if-eqz",
+        "const/16",
+        "return",
+        "const/16",
+        "goto",
+        "const/16",
+        "goto",
+        "const/16",
+        "goto",
+        "nop",
         "packed-switch-payload",
     ];
     let decoded = crate::decode_all(&bytecode, 0).unwrap();
@@ -160,14 +194,35 @@ fn test_linear_sweep_arrays() {
          63000000000302000400000005000A000F001400",
     );
     let expected: &[&str] = &[
-        "const/4", "new-array", "fill-array-data", "iput-object",
-        "const/4", "new-array", "fill-array-data", "iput-object",
-        "const/4", "new-array", "fill-array-data", "iput-object",
-        "new-array", "fill-array-data", "iput-object",
-        "const/4", "new-array", "const/4", "const-string", "aput-object",
-        "const/4", "const-string", "aput-object", "iput-object",
-        "return-void", "nop",
-        "fill-array-data-payload", "fill-array-data-payload", "fill-array-data-payload",
+        "const/4",
+        "new-array",
+        "fill-array-data",
+        "iput-object",
+        "const/4",
+        "new-array",
+        "fill-array-data",
+        "iput-object",
+        "const/4",
+        "new-array",
+        "fill-array-data",
+        "iput-object",
+        "new-array",
+        "fill-array-data",
+        "iput-object",
+        "const/4",
+        "new-array",
+        "const/4",
+        "const-string",
+        "aput-object",
+        "const/4",
+        "const-string",
+        "aput-object",
+        "iput-object",
+        "return-void",
+        "nop",
+        "fill-array-data-payload",
+        "fill-array-data-payload",
+        "fill-array-data-payload",
         "nop",
         "fill-array-data-payload",
     ];
@@ -187,7 +242,10 @@ fn test_wrong_instructions() {
     assert!(r.is_err());
 
     let r = crate::decode_all(&[0x00u8, 0x00, 0xff, 0xab], 0);
-    assert!(r.is_err(), "second instruction 0xff 0xab is incomplete (needs 4 bytes for const-method-type)");
+    assert!(
+        r.is_err(),
+        "second instruction 0xff 0xab is incomplete (needs 4 bytes for const-method-type)"
+    );
     let r2 = crate::decode_one(&[0xffu8, 0xab], 0);
     assert!(r2.is_err());
 }
@@ -393,28 +451,29 @@ fn test_resolve_fn_resolver() {
     let ins = crate::decode_one_with_resolver(&bytecode[..], 0, &resolver).unwrap();
     assert_eq!(ins.operands(), "v0, Lfoo/Bar;");
 
-    let ins_no = crate::decode_one_with_resolver(&bytecode[..], 0, &crate::FnResolver(|_, _| None)).unwrap();
+    let ins_no =
+        crate::decode_one_with_resolver(&bytecode[..], 0, &crate::FnResolver(|_, _| None)).unwrap();
     assert_eq!(ins_no.operands(), "v0, type@2");
 }
 
 /// test_branch_targets: branch_targets returns correct byte offset for goto (F10t).
 #[test]
 fn test_branch_targets_goto() {
-    // goto +2 (in 16-bit units) -> target = 0 + 2 + 2*2 = 6
+    // goto +2 (in 16-bit units) -> target = 0 + 2*2 = 4
     let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let targets = crate::branch_targets(&bytecode[..], 0);
     assert_eq!(targets.len(), 1);
-    assert_eq!(targets[0], 6);
+    assert_eq!(targets[0], 4);
 }
 
 /// test_branch_targets_if: if-eqz has one target (branch offset).
 #[test]
 fn test_branch_targets_if() {
-    // if-eqz v0, +2 (21t: AA=0, BBBB=2) -> target = 0 + 2 + 2*2 = 6
+    // if-eqz v0, +2 (21t: AA=0, BBBB=2) -> target = 0 + 2*2 = 4
     let bytecode = [0x38u8, 0x00, 0x02, 0x00];
     let targets = crate::branch_targets(&bytecode[..], 0);
     assert_eq!(targets.len(), 1);
-    assert_eq!(targets[0], 6);
+    assert_eq!(targets[0], 4);
 }
 
 /// test_branch_targets_nop: nop has no branch targets.
@@ -428,8 +487,8 @@ fn test_branch_targets_nop() {
 /// test_collect_branch_targets: collect all targets from decoded list.
 #[test]
 fn test_collect_branch_targets() {
-    // goto +2 (target 6); nop; nop; return-void at 6
-    let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    // goto +3 (target 6); nop; nop; return-void at 6
+    let bytecode = [0x28u8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let targets = crate::collect_branch_targets(&instructions, &bytecode[..], 0);
     assert!(targets.contains(&6));
@@ -439,13 +498,16 @@ fn test_collect_branch_targets() {
 /// test_basic_blocks: at least two blocks when there is a branch.
 #[test]
 fn test_basic_blocks() {
-    // goto +2; nop; nop; return-void
-    let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    // goto +2; nop; return-void
+    let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x0e, 0x00];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
     assert!(!blocks.is_empty());
     let with_successors: Vec<_> = blocks.iter().filter(|b| !b.successors.is_empty()).collect();
-    assert!(!with_successors.is_empty(), "at least one block should have successor (goto target)");
+    assert!(
+        !with_successors.is_empty(),
+        "at least one block should have successor (goto target)"
+    );
 }
 
 // ============== CFG and basic block tests ==============
@@ -459,28 +521,39 @@ fn test_cfg_single_block_no_branches() {
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
     assert_eq!(blocks.len(), 1, "linear code must be one block");
     assert_eq!(blocks[0].start_offset, 0);
-    assert_eq!(blocks[0].end_offset, u32::MAX, "single block extends to end");
+    assert_eq!(
+        blocks[0].end_offset,
+        u32::MAX,
+        "single block extends to end"
+    );
     assert!(blocks[0].successors.is_empty());
     assert!(blocks[0].fallthrough_to.is_none(), "no next block");
 }
 
-/// test_cfg_goto_three_blocks: goto +2 creates block boundary after branch and at target.
-/// Bytecode: goto +02h (0-2); nop (2-4); nop (4-6); nop (6-8); return-void (8-10).
+/// test_cfg_goto_three_blocks: goto +3 creates block boundary after branch and at target.
+/// Bytecode: goto +03h (0-2); nop (2-4); nop (4-6); nop (6-8); return-void (8-10).
 /// Block boundaries: 0 (start), 2 (after goto), 6 (target). So 3 blocks: [0,2), [2,6), [6,MAX).
 #[test]
 fn test_cfg_goto_three_blocks() {
-    let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    let bytecode = [0x28u8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
 
-    assert_eq!(blocks.len(), 3, "goto creates 3 blocks: before branch, fall-through, target");
+    assert_eq!(
+        blocks.len(),
+        3,
+        "goto creates 3 blocks: before branch, fall-through, target"
+    );
 
     // Block 0: [0, 2) — goto only; successor 6, no fallthrough (unconditional)
     assert_eq!(blocks[0].start_offset, 0);
     assert_eq!(blocks[0].end_offset, 2);
     assert_eq!(blocks[0].successors.len(), 1);
     assert_eq!(blocks[0].successors[0], 6);
-    assert!(blocks[0].fallthrough_to.is_none(), "goto has no fallthrough");
+    assert!(
+        blocks[0].fallthrough_to.is_none(),
+        "goto has no fallthrough"
+    );
 
     // Block 1: [2, 6) — two nops; fallthrough to block 2
     assert_eq!(blocks[1].start_offset, 2);
@@ -496,11 +569,11 @@ fn test_cfg_goto_three_blocks() {
 }
 
 /// test_cfg_if_eqz_blocks: if-eqz creates block boundary at target; fall-through stays in same block.
-/// if-eqz v0, +1 (21t) -> target = 0 + 2 + 1*2 = 4. Block starts: 0, 4 (target + after-branch end).
+/// if-eqz v0, +2 (21t) -> target = 0 + 2*2 = 4. Block starts: 0, 4 (target + after-branch end).
 /// So blocks: [0,4) (if-eqz) → 4; [4,MAX) (nop, return-void).
 #[test]
 fn test_cfg_if_eqz_blocks() {
-    let bytecode = [0x38u8, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    let bytecode = [0x38u8, 0x00, 0x02, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
 
@@ -508,7 +581,11 @@ fn test_cfg_if_eqz_blocks() {
     assert_eq!(blocks[0].start_offset, 0);
     assert_eq!(blocks[0].end_offset, 4);
     assert_eq!(blocks[0].successors, vec![4u32]);
-    assert_eq!(blocks[0].fallthrough_to, Some(4), "if-eqz falls through to next block");
+    assert_eq!(
+        blocks[0].fallthrough_to,
+        Some(4),
+        "if-eqz falls through to next block"
+    );
     assert_eq!(blocks[1].start_offset, 4);
     assert_eq!(blocks[1].end_offset, u32::MAX);
     assert!(blocks[1].successors.is_empty());
@@ -519,12 +596,14 @@ fn test_cfg_if_eqz_blocks() {
 #[test]
 fn test_cfg_collect_branch_targets_multiple() {
     // Two gotos: first targets 8, second (at 6) also targets 8. So unique set is {8}.
-    // Layout: goto +3 (0-2), nop (2-4), nop (4-6), goto +0 (6-8), nop (8-10), return (10-12).
+    // Layout: goto +4 (0-2), nop (2-4), nop (4-6), goto +1 (6-8), nop (8-10), return (10-12).
     let bytecode = [
-        0x28u8, 0x03, 0x00, 0x00, // goto +3 -> 8
-        0x00, 0x00, 0x00, 0x00,   // nop, nop
-        0x28u8, 0x00, 0x00, 0x00, // goto +0 -> 6+2+0=8
-        0x00, 0x00, 0x0e, 0x00,   // nop, return-void
+        0x28u8, 0x04, // goto +4 -> 8
+        0x00, 0x00, // nop
+        0x00, 0x00, // nop
+        0x28u8, 0x01, // goto +1 -> 8
+        0x00, 0x00, // nop
+        0x0e, 0x00, // return-void
     ];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let targets = crate::collect_branch_targets(&instructions, &bytecode[..], 0);
@@ -535,17 +614,21 @@ fn test_cfg_collect_branch_targets_multiple() {
 /// test_cfg_basic_block_successors_deduplicated: block with multiple branches to same target has deduplicated, sorted successors.
 #[test]
 fn test_cfg_basic_block_successors_deduplicated() {
-    // Block 0: if-eqz v0, +1 (target 4); if-nez v1, +1 (target 4). Both branch to 4 → one successor after dedupe.
+    // Block 0: if-eqz v0, +2 (target 4); if-nez v1, +2 (target 4). Both branch to 4 → one successor after dedupe.
     // Boundaries: 0, 4 (target), 6 (after second branch). So blocks: [0,4), [4,6), [6,MAX).
     let bytecode = [
-        0x38u8, 0x00, 0x01, 0x00, // if-eqz v0, +1 -> 4
-        0x39u8, 0x01, 0x01, 0x00, // if-nez v1, +1 -> 4
-        0x00, 0x00, 0x0e, 0x00,  // nop, return-void
+        0x38u8, 0x00, 0x02, 0x00, // if-eqz v0, +2 -> 4
+        0x39u8, 0x01, 0x02, 0x00, // if-nez v1, +2 -> 4
+        0x00, 0x00, 0x0e, 0x00, // nop, return-void
     ];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
     assert_eq!(blocks.len(), 3);
-    assert_eq!(blocks[0].successors.len(), 1, "successors deduplicated when two branches share target");
+    assert_eq!(
+        blocks[0].successors.len(),
+        1,
+        "successors deduplicated when two branches share target"
+    );
     assert_eq!(blocks[0].successors[0], 4);
     assert_eq!(blocks[0].successors, vec![4u32], "sorted order");
 }
@@ -553,17 +636,18 @@ fn test_cfg_basic_block_successors_deduplicated() {
 /// test_cfg_collect_branch_targets_two_distinct: two branches to different targets → set size 2.
 #[test]
 fn test_cfg_collect_branch_targets_two_distinct() {
-    // goto +2 (0-2) -> target 6; nop (2-4); goto -1 (4-6) -> target 4 (4+2-2=4); nop (6-8); return (8-10).
-    // So targets are 4 and 6.
+    // goto +3 (0-2) -> 6; nop (2-4); goto -1 (4-6) -> 2; nop (6-8); return (8-10).
     let bytecode = [
-        0x28u8, 0x02, 0x00, 0x00, // goto +2 -> 6
-        0x28u8, 0xff, 0x00, 0x00, // goto -1 -> 4+2-2=4
-        0x00, 0x00, 0x0e, 0x00,   // nop, return-void
+        0x28u8, 0x03, // goto +3 -> 6
+        0x00, 0x00, // nop
+        0x28u8, 0xff, // goto -1 -> 2
+        0x00, 0x00, // nop
+        0x0e, 0x00, // return-void
     ];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let targets = crate::collect_branch_targets(&instructions, &bytecode[..], 0);
     assert_eq!(targets.len(), 2);
-    assert!(targets.contains(&4));
+    assert!(targets.contains(&2));
     assert!(targets.contains(&6));
 }
 
@@ -571,7 +655,7 @@ fn test_cfg_collect_branch_targets_two_distinct() {
 /// data must be the full buffer so branch_targets(data, start) can read at start; code lives at data[base..].
 #[test]
 fn test_cfg_base_offset() {
-    let code = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    let code = [0x28u8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let base = 16usize;
     let mut data = vec![0u8; base];
     data.extend_from_slice(&code);
@@ -590,13 +674,13 @@ fn test_cfg_base_offset() {
 /// test_cfg_packed_switch_expands_case_targets: explicit_successors expands packed-switch payload into case edges.
 #[test]
 fn test_cfg_packed_switch_expands_case_targets() {
-    // packed-switch v0, +4 (payload at 10)
+    // packed-switch v0, +5 (payload at 10)
     // 0x00: packed-switch (6 bytes)
     // 0x06: nop
     // 0x08: return-void
     // 0x0a: packed-switch-payload (size=2, targets -> 0x06 and 0x08)
     let bytecode = hex(concat!(
-        "2B0004000000", // packed-switch v0, +4 (31t: BBBBBBBB = 4)
+        "2B0005000000", // packed-switch v0, +5 (31t: BBBBBBBB = 5) -> payload at 10
         "0000",         // nop (fallthrough)
         "0E00",         // return-void
         "0001",         // ident = 0x0100
@@ -611,7 +695,11 @@ fn test_cfg_packed_switch_expands_case_targets() {
 
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let blocks = crate::basic_blocks(&instructions, &bytecode[..], 0);
-    assert_eq!(blocks.len(), 3, "switch splits blocks at case targets and after switch");
+    assert_eq!(
+        blocks.len(),
+        3,
+        "switch splits blocks at case targets and after switch"
+    );
     assert_eq!(blocks[0].start_offset, 0);
     assert_eq!(blocks[0].end_offset, 6);
     assert_eq!(blocks[0].successors, vec![6u32, 8u32]);
@@ -620,9 +708,9 @@ fn test_cfg_packed_switch_expands_case_targets() {
 /// test_cfg_sparse_switch_expands_case_targets: explicit_successors expands sparse-switch payload.
 #[test]
 fn test_cfg_sparse_switch_expands_case_targets() {
-    // sparse-switch v0, +4 (payload at 10) with one key and one target -> 0x08
+    // sparse-switch v0, +5 (payload at 10) with one key and one target -> 0x08
     let bytecode = hex(concat!(
-        "2C0004000000", // sparse-switch v0, +4
+        "2C0005000000", // sparse-switch v0, +5
         "0000",         // nop
         "0E00",         // return-void (target)
         "0002",         // ident = 0x0200
@@ -654,18 +742,30 @@ fn test_cfg_fill_array_data_is_not_branch() {
 #[test]
 fn test_is_unconditional_branch() {
     assert!(crate::is_unconditional_branch(&[0x28u8, 0x00, 0x00], 0)); // goto
-    assert!(crate::is_unconditional_branch(&[0x29u8, 0x00, 0x00, 0x00], 0)); // goto/16
-    assert!(crate::is_unconditional_branch(&[0x2au8, 0x00, 0x00, 0x00, 0x00, 0x00], 0)); // goto/32
-    assert!(!crate::is_unconditional_branch(&[0x38u8, 0x00, 0x01, 0x00], 0)); // if-eqz
-    assert!(!crate::is_unconditional_branch(&[0x00u8, 0x00, 0x00, 0x00], 0)); // nop
+    assert!(crate::is_unconditional_branch(
+        &[0x29u8, 0x00, 0x00, 0x00],
+        0
+    )); // goto/16
+    assert!(crate::is_unconditional_branch(
+        &[0x2au8, 0x00, 0x00, 0x00, 0x00, 0x00],
+        0
+    )); // goto/32
+    assert!(!crate::is_unconditional_branch(
+        &[0x38u8, 0x00, 0x01, 0x00],
+        0
+    )); // if-eqz
+    assert!(!crate::is_unconditional_branch(
+        &[0x00u8, 0x00, 0x00, 0x00],
+        0
+    )); // nop
 }
 
 /// test_cfg_edges_includes_fallthrough: cfg_edges returns both branch and fallthrough edges.
 #[test]
 fn test_cfg_edges_includes_fallthrough() {
-    // goto +2 (0-2) -> 6; nop (2-4); nop (4-6); nop (6-8); return-void (8-10).
+    // goto +3 (0-2) -> 6; nop (2-4); nop (4-6); nop (6-8); return-void (8-10).
     // Blocks: [0,2) [2,6) [6,MAX). Edges: 0->6 (goto), 2->6 (fallthrough), 6->(none).
-    let bytecode = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
+    let bytecode = [0x28u8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let edges = crate::cfg_edges(&instructions, &bytecode[..], 0);
     assert!(edges.contains(&(0, 6)), "goto edge 0 -> 6");
@@ -747,11 +847,11 @@ fn test_exception_edges() {
 /// test_patch_branch_target: patch_branch_target rewrites goto to new target.
 #[test]
 fn test_patch_branch_target() {
-    let mut data = [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00]; // goto +2 -> 6; nop; return-void
+    let mut data = [0x28u8, 0x03, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00]; // goto +3 -> 6; nop; nop; return-void
     crate::patch_branch_target(&mut data[..], 0, 6).unwrap();
-    assert_eq!(data[0..2], [0x28, 0x02]); // unchanged: already targets 6
+    assert_eq!(data[0..2], [0x28, 0x03]); // unchanged: already targets 6
     crate::patch_branch_target(&mut data[..], 0, 4).unwrap();
-    assert_eq!(data[0..2], [0x28, 0x01]); // +1 unit -> 4
+    assert_eq!(data[0..2], [0x28, 0x02]); // +2 units -> 4
 }
 
 /// test_encode_helpers: encode_nop, encode_return_void, encode_goto produce correct bytes.
@@ -771,10 +871,12 @@ fn test_encode_helpers() {
 #[test]
 fn test_disasm_precompute_label_offsets_matches_collect_branch_targets() {
     let bytecode = [
-        0x28u8, 0x03, 0x00, 0x00, // goto +3 -> 8
-        0x00, 0x00, 0x00, 0x00,   // nop, nop
-        0x28u8, 0x00, 0x00, 0x00, // goto +0 -> 8
-        0x00, 0x00, 0x0e, 0x00,   // nop, return-void
+        0x28u8, 0x04, // goto +4 -> 8
+        0x00, 0x00, // nop
+        0x00, 0x00, // nop
+        0x28u8, 0x01, // goto +1 -> 8
+        0x00, 0x00, // nop
+        0x0e, 0x00, // return-void
     ];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let slice = &bytecode[..];
@@ -788,7 +890,10 @@ fn test_disasm_precompute_label_offsets_matches_collect_branch_targets() {
         }
     }
     let expected = crate::collect_branch_targets(&instructions, slice, base);
-    assert_eq!(label_offsets, expected, "precompute label set must match collect_branch_targets");
+    assert_eq!(
+        label_offsets, expected,
+        "precompute label set must match collect_branch_targets"
+    );
 }
 
 /// test_disasm_precompute_targets_per_ins_matches_branch_targets: precomputed targets_per_ins matches per-instruction branch_targets.
@@ -797,7 +902,7 @@ fn test_disasm_precompute_targets_per_ins_matches_branch_targets() {
     let bytecode = [
         0x38u8, 0x00, 0x01, 0x00, // if-eqz v0, +1 -> 4
         0x39u8, 0x01, 0x01, 0x00, // if-nez v1, +1 -> 4
-        0x00, 0x00, 0x0e, 0x00,  // nop, return-void
+        0x00, 0x00, 0x0e, 0x00, // nop, return-void
     ];
     let instructions = crate::decode_all(&bytecode[..], 0).unwrap();
     let slice = &bytecode[..];
@@ -835,6 +940,11 @@ fn test_decode_all_large_unchanged() {
         assert_eq!(ins_a.offset, ins_b.offset, "instruction {} offset", i);
         assert_eq!(ins_a.length, ins_b.length, "instruction {} length", i);
         assert_eq!(ins_a.opcode(), ins_b.opcode(), "instruction {} opcode", i);
-        assert_eq!(ins_a.mnemonic(), ins_b.mnemonic(), "instruction {} mnemonic", i);
+        assert_eq!(
+            ins_a.mnemonic(),
+            ins_b.mnemonic(),
+            "instruction {} mnemonic",
+            i
+        );
     }
 }

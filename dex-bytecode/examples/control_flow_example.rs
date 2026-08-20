@@ -2,23 +2,26 @@
 //!
 //! Run with: `cargo run -p dex-bytecode --example control_flow_example`
 
-use dex_bytecode::{
-    basic_blocks, branch_targets, collect_branch_targets, decode_all,
-};
+use dex_bytecode::{basic_blocks, branch_targets, collect_branch_targets, decode_all};
 
 fn main() {
-    // Small method: goto +2; nop; nop; return-void (branch target at offset 6)
+    // Small method: goto +3; nop; nop; return-void (branch target at offset 6)
     let bytecode: &[u8] = &[
-        0x28, 0x02, 0x00, 0x00, // goto +2 (target = 6)
-        0x00, 0x00,             // nop
-        0x00, 0x00,             // nop
-        0x0e, 0x00,             // return-void
+        0x28, 0x03, 0x00, 0x00, // goto +3 (target = 6); nop
+        0x00, 0x00, // nop
+        0x00, 0x00, // nop
+        0x0e, 0x00, // return-void
     ];
 
     let instructions = decode_all(bytecode, 0).unwrap();
     println!("Instructions:");
     for ins in &instructions {
-        println!("  {:08x}  {} {}", ins.offset, ins.mnemonic(), ins.operands());
+        println!(
+            "  {:08x}  {} {}",
+            ins.offset,
+            ins.mnemonic(),
+            ins.operands()
+        );
     }
 
     let targets = collect_branch_targets(&instructions, bytecode, 0);

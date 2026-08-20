@@ -11,9 +11,7 @@ pub struct DexError {
 impl DexError {
     /// Invalid instruction or truncated buffer.
     pub fn invalid(msg: impl Into<String>) -> Self {
-        Self {
-            error: msg.into(),
-        }
+        Self { error: msg.into() }
     }
 
     /// Invalid instruction with dynamic message (allocates).
