@@ -21,6 +21,6 @@ pub use decoder::{
 };
 pub use error::DexError;
 pub use instruction::{Instruction, RefKind};
-pub use opcodes::{get_opcode_entry, Format, OpcodeEntry, PayloadKind};
+pub use opcodes::{format_length, get_opcode_entry, Format, OpcodeEntry, PayloadKind};
 pub use patch::{encode_goto, encode_nop, encode_return_void, patch_branch_target};
 pub use resolve::{FnResolver, ResolveRef};
