@@ -32,7 +32,7 @@ DEX bytecode disassembler and assembler (Rust core) with Python bindings.
 - **Try/catch formatting**: `TryCatchEntry`, `format_catch_line`
 - **Patching / minimal encoding**: `patch_branch_target(data, from_offset, to_offset)`, `encode_nop()`, `encode_return_void()`, `encode_goto(rel_units)`
 - **CLI disassembler** (Rust): file/stdin/hex input, labels, basic-block view (`--blocks`), DOT export (`--dot`), `--no-addresses`, `--color always|never|auto`, `--quiet`. Optimized for large files (buffered output, one-pass branch-target precompute).
-- **Python bindings + CLI**: `dex-bytecode-py` provides `disassemble()`/`decode_instruction()` and a `dex-dis` command
+- **Python bindings + CLI**: `dex-bytecode-py` provides `disassemble()`, `decode_instruction()`, `basic_blocks()`, `cfg_edges()`, `patch_branch()`, encode helpers, and a `dex-dis` command
 
 ## Documentation
 
@@ -44,8 +44,8 @@ DEX bytecode disassembler and assembler (Rust core) with Python bindings.
        │                      │                       │                    │
        ▼                      ▼                       ▼                    ▼
   ┌─────────┐           ┌───────────┐           ┌───────────┐        ┌───────────┐
-  │ 28 02   │           │ Instruction│           │ Block 0   │        │ (0, 6)    │
-  │ 00 00   │  ──────►  │ Instruction│  ──────►  │ Block 1   │  ───►  │ (2, 6)    │  (DOT, etc.)
+  │ 28 02   │           │ Instruction│           │ Block 0   │        │ (0, 4)    │
+  │ 00 00   │  ──────►  │ Instruction│  ──────►  │ Block 1   │  ───►  │ (2, 4)    │  (DOT, etc.)
   │ ...     │           │ ...       │           │ Block 2   │        │ ...       │
   └─────────┘           └───────────┘           └───────────┘        └───────────┘
 ```
@@ -67,25 +67,25 @@ Instructions are decoded in order from the byte buffer. Each instruction’s len
 
 ### Control flow
 
-- **Branch targets** — `branch_targets(data, offset)` returns the byte offset(s) the instruction at `offset` may jump to (one for goto/if-*, or the payload offset for switch). Use for labels.
+- **Branch targets** — `branch_targets(data, offset)` returns the byte offset(s) the instruction at `offset` may jump to (one for goto/if-*, or the payload offset for switch). Use for labels. Dalvik branch offsets are relative to the **current** instruction address (`target = offset + signed_units * 2`).
 - **Explicit successors** — `explicit_successors(data, offset)` is CFG-aware: for packed/sparse-switch it returns all case targets; for fill-array-data it returns none. Use with `basic_blocks`.
 - **Unconditional branches** — `is_unconditional_branch(data, offset)` returns true for goto (0x28), goto/16 (0x29), goto/32 (0x2a). Used internally to set `fallthrough_to` (none for these).
 - **Basic blocks** — `basic_blocks(instructions, data, base_offset)` splits code into contiguous blocks. Each block has `start_offset`, `end_offset`, `successors` (branch targets, deduplicated and sorted), and `fallthrough_to` (next block when the block does not end with an unconditional goto).
 
-  Example: `goto +2` at 0, then nops, then `return-void`. Block boundaries at 0 (entry), 2 (after goto), 6 (target).
+  Example: `goto +2` at 0 → target 4. Block boundaries at 0 (entry), 2 (after goto), 4 (target).
 
   ```
   offset   0    2    4    6    8
            ├────┤    ├────┤    ├──── ...
            │goto│    │nop │    │nop
-           │    │    │nop │    │ret
-           └──┬─┘    └──┬─┘    └────
-              │         │
-   block 0 ───┘         │  fallthrough_to = 6
-   (successors=[6])     │
+           │ +2 │    │    │    │nop
+           └──┬─┘    └──┬─┘    │ret
+              │         │      └────
+   block 0 ───┘         │
+   successors=[4]       │  fallthrough_to = 4
    no fallthrough       │
    (ends with goto)     │  block 1
-                        └──► block 2 start
+                        └──► block 2 start (:L00000004)
   ```
 
 - **CFG edges** — `cfg_edges(instructions, data, base_offset)` returns all edges `(from, to)` including fallthrough. Use for graph algorithms or DOT export.
@@ -93,10 +93,10 @@ Instructions are decoded in order from the byte buffer. Each instruction’s len
   ```
        block 0              block 1              block 2
    ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-   │ goto → 6    │      │ nop         │      │ nop         │
-   │             │      │ nop         │      │ return-void │
-   └──────┬──────┘      └──────┬──────┘      └─────────────┘
-          │  branch            │  fallthrough
+   │ goto → 4    │      │ nop         │      │ nop         │
+   │             │      │             │      │ nop         │
+   └──────┬──────┘      └──────┬──────┘      │ return-void │
+          │  branch            │  fallthrough └─────────────┘
           │                    │
           └────────────────────┴──────────────► block 2
   ```
@@ -144,7 +144,7 @@ Instructions are decoded in order from the byte buffer. Each instruction’s len
 
 ### Rust library
 
-**Decode and iterate:**
+**Decode and iterate** (bytecode: `nop`; `return-void`):
 
 ```rust
 use dex_bytecode::{decode_all, decode_one, Decoder};
@@ -153,9 +153,11 @@ let data = [0x00u8, 0x00, 0x0e, 0x00]; // nop; return-void
 
 let ins0 = decode_one(&data, 0).unwrap();
 assert_eq!(ins0.mnemonic(), "nop");
+assert_eq!(ins0.length(), 2);
 
 let all = decode_all(&data, 0).unwrap();
 assert_eq!(all.len(), 2);
+assert_eq!(all[1].mnemonic(), "return-void");
 
 let mut it = Decoder::new(&data, 0, None);
 while let Some(Ok(ins)) = it.next() {
@@ -163,18 +165,98 @@ while let Some(Ok(ins)) = it.next() {
 }
 ```
 
-**Control flow and patching:**
+Output:
+
+```
+00000000 nop
+00000002 return-void
+```
+
+**Control flow** (bytecode: `goto +2`; `nop`; `nop`; `nop`; `return-void` — hex `28020000000000000e00`):
 
 ```rust
-use dex_bytecode::{basic_blocks, cfg_edges, decode_all, patch_branch_target};
+use dex_bytecode::{
+    basic_blocks, branch_targets, cfg_edges, collect_branch_targets, decode_all,
+};
 
-let data = &mut [0x28u8, 0x02, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00]; // goto +2; nop; return-void
+// goto +02h (target = 4); nop; nop; nop; return-void
+let data: &[u8] = &[
+    0x28, 0x02, // goto +2  → offset 4
+    0x00, 0x00, // nop
+    0x00, 0x00, // nop   ← label :L00000004
+    0x00, 0x00, // nop
+    0x0e, 0x00, // return-void
+];
+
+let instructions = decode_all(data, 0).unwrap();
+for ins in &instructions {
+    println!("{:08x}  {} {}", ins.offset, ins.mnemonic(), ins.operands());
+}
+
+let labels = collect_branch_targets(&instructions, data, 0);
+assert!(labels.contains(&4));
+
+assert_eq!(branch_targets(data, 0), vec![4u32]);
+
+let blocks = basic_blocks(&instructions, data, 0);
+assert_eq!(blocks.len(), 3);
+assert_eq!(blocks[0].successors, vec![4u32]);      // goto
+assert!(blocks[0].fallthrough_to.is_none());        // unconditional
+assert_eq!(blocks[1].fallthrough_to, Some(4));      // fallthrough into target
+
+let edges = cfg_edges(&instructions, data, 0);
+assert!(edges.contains(&(0, 4))); // branch
+assert!(edges.contains(&(2, 4))); // fallthrough
+```
+
+Output:
+
+```
+00000000  goto +02h
+00000002  nop
+00000004  nop
+00000006  nop
+00000008  return-void
+```
+
+**Patching:**
+
+```rust
+use dex_bytecode::{decode_all, encode_goto, encode_nop, encode_return_void, patch_branch_target};
+
+let mut data = [
+    0x28, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x00,
+];
+assert_eq!(&encode_goto(2)[..], &data[0..2]);
+assert_eq!(&encode_nop()[..], &[0x00, 0x00]);
+assert_eq!(&encode_return_void()[..], &[0x0e, 0x00]);
+
+// Retarget the goto from offset 4 to offset 6
+patch_branch_target(&mut data, 0, 6).unwrap();
+let instructions = decode_all(&data, 0).unwrap();
+assert_eq!(instructions[0].operands(), "+03h"); // +3 units → byte offset 6
+```
+
+**Try/catch (exception edges):**
+
+```rust
+use dex_bytecode::{basic_blocks, decode_all, exception_edges, format_catch_line, TryCatchEntry};
+
+let data: &[u8] = &[0x00, 0x00, 0x00, 0x00, 0x0e, 0x00]; // nop; nop; return-void
 let instructions = decode_all(data, 0).unwrap();
 let blocks = basic_blocks(&instructions, data, 0);
-let edges = cfg_edges(&instructions, data, 0);
 
-// Patch the goto to jump elsewhere (e.g. offset 4)
-patch_branch_target(data, 0, 4).unwrap();
+let entry = TryCatchEntry {
+    start_offset: 0,
+    end_offset: 4,
+    handler_offset: 4,
+    type_index: Some(1),
+};
+println!("{}", format_catch_line(&entry, Some("Ljava/lang/Exception;")));
+// .catch Ljava/lang/Exception; { 0x00000000 .. 0x00000004 } :L00000004
+
+let ex = exception_edges(&[entry], &blocks);
+// edges from every block overlapping [0,4) → handler 4
 ```
 
 ### CLI (Rust)
@@ -183,28 +265,61 @@ From the repo root:
 
 ```bash
 # Disassemble from hex
-cargo run --bin dex-bytecode-dis -- --hex "28020000000000000e00"
+cargo run --bin dex-bytecode-dis -- --hex "28020000000000000e00" -q
+```
 
-# Disassemble from a file
+```
+00000000  28                   goto +02h
+00000002  00                   nop
+00000004  00                   nop
+00000006  00                   nop
+00000008  0e                   return-void
+```
+
+```bash
+# Labels + basic blocks
+cargo run --bin dex-bytecode-dis -- --hex "28020000000000000e00" -b -q --color never
+```
+
+```
+╭── block 0 → :L00000004
+│ 00000000  28                   goto +02h
+│   → :L00000004
+╭── block 1   (no successors)
+│ 00000002  00                   nop
+╭── block 2   (no successors)
+:L00000004
+│ 00000004  00                   nop
+│ 00000006  00                   nop
+│ 00000008  0e                   return-void
+╰──
+```
+
+```bash
+# DOT (Graphviz) CFG
+cargo run --bin dex-bytecode-dis -- --hex "28020000000000000e00" --dot
+```
+
+```
+digraph cfg {
+  rankdir=TB;
+  node [shape=box, fontname="monospace"];
+  b0 [label="block 0\n0x00000000..0x00000002"];
+  b1 [label="block 1\n0x00000002..0x00000004"];
+  b2 [label="block 2\n0x00000004..end"];
+  b0 -> b2;
+  b1 -> b2;
+}
+```
+
+Other useful flags:
+
+```bash
 cargo run --bin dex-bytecode-dis -- -i path/to/bytecode.bin
-
-# Disassemble from stdin
 cat path/to/bytecode.bin | cargo run --bin dex-bytecode-dis -- -i -
-
-# Start at an offset
 cargo run --bin dex-bytecode-dis -- -i file.bin -o 16
-
-# Show labels at branch targets
 cargo run --bin dex-bytecode-dis -- -i file.bin -l
-
-# Show basic blocks with arrows (colors when stdout is a TTY)
-cargo run --bin dex-bytecode-dis -- -i file.bin -b
-
-# Output control-flow graph in DOT (Graphviz) format
-cargo run --bin dex-bytecode-dis -- -i file.bin --dot > cfg.dot
-# Then: dot -Tpng cfg.dot -o cfg.png
-
-# Omit address column; force color on/off; omit trailing comment
+cargo run --bin dex-bytecode-dis -- -i file.bin --dot > cfg.dot   # then: dot -Tpng cfg.dot -o cfg.png
 cargo run --bin dex-bytecode-dis -- -i file.bin --no-addresses
 cargo run --bin dex-bytecode-dis -- -i file.bin --color always
 cargo run --bin dex-bytecode-dis -- -i file.bin -q
@@ -216,7 +331,7 @@ Notes:
 
 ### Python bindings + Python CLI
 
-See [`dex-bytecode-py/README.md`](dex-bytecode-py/README.md).
+See [`dex-bytecode-py/README.md`](dex-bytecode-py/README.md) for full API details.
 
 **Install** (from repo root; use the same virtualenv you want to test with):
 
@@ -225,17 +340,70 @@ See [`dex-bytecode-py/README.md`](dex-bytecode-py/README.md).
 PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop -m dex-bytecode-py/Cargo.toml
 ```
 
-**Quick test** — Use the **same** Python that maturin used (the one in your active venv). If you get `ModuleNotFoundError: No module named 'dex_bytecode_py'`, the interpreter is different from the one the package was installed into; activate the venv and try again:
+**Disassemble and CFG** (same bytecode as the Rust example):
 
-```bash
-# Activate the venv maturin installed into (e.g. /path/to/.venv/bin/activate), then:
-python -c "from dex_bytecode_py import disassemble; print(disassemble(b'\x00\x00\x0e\x00'))"
+```python
+from dex_bytecode_py import (
+    disassemble,
+    decode_instruction,
+    get_branch_targets,
+    basic_blocks,
+    cfg_edges,
+    patch_branch,
+    encode_goto_bytes,
+    encode_nop_bytes,
+    encode_return_void_bytes,
+)
+
+# goto +2; nop; nop; nop; return-void
+bc = bytes.fromhex("28020000000000000e00")
+
+for ins in disassemble(bc):
+    print(f"{ins['offset']:08x}  {ins['mnemonic']:12} {ins['operands']}")
+# 00000000  goto         +02h
+# 00000002  nop
+# 00000004  nop
+# 00000006  nop
+# 00000008  return-void
+
+print(decode_instruction(bc, 0)["disasm"])   # "goto +02h"
+print(sorted(get_branch_targets(bc)))        # [4]
+
+for i, b in enumerate(basic_blocks(bc)):
+    print(
+        f"block {i}: [{b['start_offset']},{b['end_offset']}) "
+        f"succ={b['successors']} ft={b['fallthrough_to']}"
+    )
+# block 0: [0,2) succ=[4] ft=None
+# block 1: [2,4) succ=[] ft=4
+# block 2: [4,10) succ=[] ft=None
+
+print([(e["from"], e["to"]) for e in cfg_edges(bc)])
+# [(0, 4), (2, 4)]
+
+# Patch goto target from 4 → 6, then re-disassemble
+patched = patch_branch(bc, 0, 6)
+print(disassemble(patched)[0]["operands"])  # "+03h"
+
+assert encode_goto_bytes(2) == bytes([0x28, 0x02])
+assert encode_nop_bytes() == bytes([0x00, 0x00])
+assert encode_return_void_bytes() == bytes([0x0e, 0x00])
 ```
 
-Or run the CLI:
+**Quick one-liner** (must use the same Python that maturin installed into):
+
+```bash
+python -c "from dex_bytecode_py import disassemble; print(disassemble(bytes.fromhex('28020000000000000e00')))"
+```
+
+If you get `ModuleNotFoundError: No module named 'dex_bytecode_py'`, activate the venv first (e.g. `source .venv/bin/activate`) and try again.
+
+**Python CLI** (`dex-dis`):
 
 ```bash
 dex-dis --hex "28020000000000000e00" --labels
+dex-dis --hex "28020000000000000e00"
+dex-dis -i path/to/bytecode.bin
 ```
 
 **Run Python tests:**
