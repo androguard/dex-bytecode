@@ -376,11 +376,11 @@ pub static OPCODE_TABLE: [OpcodeEntry; 256] = [
     OpcodeEntry::new(Format::F00x, "unused", RefKind::None),
     OpcodeEntry::new(Format::F00x, "unused", RefKind::None),
     OpcodeEntry::new(Format::F00x, "unused", RefKind::None),
-    OpcodeEntry::new(Format::F45cc, "invoke-polymorphic", RefKind::MethodProto),
+    OpcodeEntry::new(Format::F45cc, "invoke-polymorphic", RefKind::Method),
     OpcodeEntry::new(
         Format::F4rcc,
         "invoke-polymorphic/range",
-        RefKind::MethodProto,
+        RefKind::Method,
     ),
     OpcodeEntry::new(Format::F35c, "invoke-custom", RefKind::CallSite),
     OpcodeEntry::new(Format::F3rc, "invoke-custom/range", RefKind::CallSite),

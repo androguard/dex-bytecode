@@ -1,5 +1,6 @@
 mod control_flow;
 mod decoder;
+mod encode;
 mod error;
 mod instruction;
 mod opcodes;
@@ -19,6 +20,7 @@ pub use control_flow::{
 pub use decoder::{
     decode_all, decode_all_with_resolver, decode_one, decode_one_with_resolver, Decoder,
 };
+pub use encode::{encode_instruction, opcode_for_mnemonic, EncodeResolve, IndexResolve};
 pub use error::DexError;
 pub use instruction::{Instruction, RefKind};
 pub use opcodes::{format_length, get_opcode_entry, Format, OpcodeEntry, PayloadKind};

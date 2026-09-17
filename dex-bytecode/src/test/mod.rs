@@ -1,5 +1,6 @@
 //! Tests mirroring androguard tests/test_dex.py (InstructionTest and related).
 
+mod encode_roundtrip;
 mod instructions;
 
 use crate::decoder::Decoder;

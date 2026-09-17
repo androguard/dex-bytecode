@@ -50,6 +50,16 @@ fn read_u64(data: &[u8], offset: usize) -> Option<u64> {
     Some(u64::from_le_bytes(bytes))
 }
 
+/// Format a signed relative offset the way assemblers expect (`+02h`, `-08h`),
+/// not Rust's `{:x}` two's-complement form (`+fff8h` for `-8i16`).
+fn fmt_rel_hex(rel: i32, width: usize) -> String {
+    if rel < 0 {
+        format!("-{:0width$x}h", rel.wrapping_neg() as u32, width = width)
+    } else {
+        format!("+{:0width$x}h", rel as u32, width = width)
+    }
+}
+
 /// Decode a single instruction at `offset` in `data`. Returns the instruction and its length.
 pub fn decode_one(data: &[u8], offset: usize) -> Result<Instruction, DexError> {
     let unit = read_u16(data, offset)
@@ -140,7 +150,7 @@ where
         Format::F10x => String::new(),
         Format::F10t => {
             let aa = high_byte(data, offset) as i8;
-            format!("{:+03x}h", aa)
+            fmt_rel_hex(aa as i32, 2)
         }
         Format::F11n => {
             let byte = data[offset + 1] as i8;
@@ -158,7 +168,7 @@ where
         }
         Format::F20t => {
             let aaaa = read_i16(data, offset + 2).unwrap_or(0);
-            format!("{:+05x}h", aaaa)
+            fmt_rel_hex(aaaa as i32, 4)
         }
         Format::F20bc => {
             let aa = data[offset + 1];
@@ -190,7 +200,7 @@ where
         Format::F21t => {
             let aa = data[offset + 1];
             let bbbb = read_i16(data, offset + 2).unwrap_or(0);
-            format!("v{}, {:+04x}h", aa, bbbb)
+            format!("v{}, {}", aa, fmt_rel_hex(bbbb as i32, 4))
         }
         Format::F22b => {
             let aa = data[offset + 1];
@@ -211,7 +221,7 @@ where
         Format::F22t => {
             let (a, b) = ab_from_first(data, offset);
             let cccc = read_i16(data, offset + 2).unwrap_or(0);
-            format!("v{}, v{}, {:+04x}h", a, b, cccc)
+            format!("v{}, v{}, {}", a, b, fmt_rel_hex(cccc as i32, 4))
         }
         Format::F22cs => {
             let (a, b) = ab_from_first(data, offset);
@@ -226,7 +236,7 @@ where
         }
         Format::F30t => {
             let aaaaaaaa = read_i32(data, offset + 2).unwrap_or(0);
-            format!("{:+08x}h", aaaaaaaa)
+            fmt_rel_hex(aaaaaaaa, 8)
         }
         Format::F31c => {
             let aa = data[offset + 1];
@@ -241,7 +251,7 @@ where
         Format::F31t => {
             let aa = data[offset + 1];
             let bbbbbbbb = read_i32(data, offset + 2).unwrap_or(0);
-            format!("v{}, {:+08x}h", aa, bbbbbbbb)
+            format!("v{}, {}", aa, fmt_rel_hex(bbbbbbbb, 8))
         }
         Format::F32x => {
             let aaaa = read_u16(data, offset + 2).unwrap_or(0);
