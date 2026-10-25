@@ -5,6 +5,7 @@ mod error;
 mod instruction;
 mod opcodes;
 mod patch;
+mod raw;
 mod resolve;
 
 #[cfg(test)]
@@ -25,4 +26,5 @@ pub use error::DexError;
 pub use instruction::{Instruction, RefKind};
 pub use opcodes::{format_length, get_opcode_entry, Format, OpcodeEntry, PayloadKind};
 pub use patch::{encode_goto, encode_nop, encode_return_void, patch_branch_target};
+pub use raw::{decode_raw_iter, decode_raw_one, RawInsn, RawInsnIter};
 pub use resolve::{FnResolver, ResolveRef};

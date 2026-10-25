@@ -4,9 +4,10 @@
 use crate::instruction::RefKind;
 
 /// Format identifier for instruction decoding (number of 16-bit units and layout).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[repr(u8)]
 pub enum Format {
+    #[default]
     F00x,  // unused / invalid
     F10x,  // op
     F10t,  // op AA (s8 offset)
